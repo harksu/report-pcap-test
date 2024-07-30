@@ -119,14 +119,13 @@ int main(int argc, char* argv[]) {
 		print_mac_addr(eth_hdr, "src_mac_addr");
 		print_mac_addr(eth_hdr, "dst_mac_addr");
 		print_ip_addr(ipv4_hdr);
-		printf("tcp_src_port: %u tcp_dst_port: %u\n", ntohs(tcp_hdr->th_sport), ntohs(tcp_hdr->th_dport));
+		printf("tcp_src_port: %u\ntcp_dst_port: %u\n", ntohs(tcp_hdr->th_sport), ntohs(tcp_hdr->th_dport));
 
 		const u_char* payload = packet + sizeof(*eth_hdr) + sizeof(*ipv4_hdr) + sizeof(*tcp_hdr);
 		int payload_len = (header->caplen) - (sizeof(*eth_hdr) + sizeof(*ipv4_hdr) + sizeof(*tcp_hdr));
 		print_payload(payload, payload_len);
-
-
-		pcap_close(pcap);
 	}
+	pcap_close(pcap);
+	return 0;
 }
 
