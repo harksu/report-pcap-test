@@ -4,6 +4,7 @@
 #include <libnet.h>
 #include <arpa/inet.h>
 
+
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
 	printf("sample: pcap-test wlan0\n");
@@ -29,28 +30,28 @@ bool parse(Param* param, int argc, char* argv[]) {
 
 void print_mac_addr(struct libnet_ethernet_hdr* mac_hdr, const char* field){
 
-		printf("%s:",field);
-		if(field =="src_mac_addr"){
+	printf("%s:",field);
+	if(field =="src_mac_addr"){
 		for (int i = 0; i<ETHER_ADDR_LEN; i++){
-		i == ETHER_ADDR_LEN-1 ? printf("%02x\n",mac_hdr->ether_shost[i]) : printf("%02x:",mac_hdr->ether_shost[i]);
-			}
+			i == ETHER_ADDR_LEN-1 ? printf("%02x\n",mac_hdr->ether_shost[i]) : printf("%02x:",mac_hdr->ether_shost[i]);
 		}
-		else if(field =="dst_mac_addr"){
-		
+	}
+	else if(field =="dst_mac_addr"){
+
 		for (int i = 0; i<ETHER_ADDR_LEN; i++){
 			i == ETHER_ADDR_LEN-1 ? printf("%02x\n",mac_hdr->ether_dhost[i]) : printf("%02x:",mac_hdr->ether_dhost[i]);
 		}
-		}
-		else{
-			printf("field is src_mac_addr or dst_mac_addr, try again");
-			return;
-		}
+	}
+	else{
+		printf("field is src_mac_addr or dst_mac_addr, try again");
+		return;
+	}
 }
 
 void print_ip_addr(struct libnet_ipv4_hdr* ipv4_hdr){
 	u_int8_t ip1=0, ip2=0, ip3=0, ip4=0;
-	u_int32_t src_ip_addr = src_ip_addr = ipv4_hdr->ip_src.s_addr;
-	u_int32_t dst_ip_addr = ipv4_hdr->ip_dst.s_addr;
+	u_int32_t src_ip_addr = src_ip_addr = ntohl(ipv4_hdr->ip_src.s_addr);
+	u_int32_t dst_ip_addr = ntohl(ipv4_hdr->ip_dst.s_addr);
 
 
 
@@ -69,6 +70,14 @@ void print_ip_addr(struct libnet_ipv4_hdr* ipv4_hdr){
 	//refactoring,, 
 }
 
+
+void print_payload(const u_char* payload, int len) {
+	printf("Payload: ");
+	for (int i = 0; i < len && i < 20; i++) {
+		printf("%02x ", payload[i]);
+	}
+	printf("\n");
+}
 
 
 int main(int argc, char* argv[]) {
@@ -90,7 +99,7 @@ int main(int argc, char* argv[]) {
 		struct libnet_tcp_hdr* tcp_hdr; // tcp header 
 
 		const u_char* packet;
-		
+
 		int res = pcap_next_ex(pcap, &header, &packet);
 		if (res == 0) continue;
 		if (res == PCAP_ERROR || res == PCAP_ERROR_BREAK) {
@@ -99,18 +108,25 @@ int main(int argc, char* argv[]) {
 		}
 
 		eth_hdr = (struct libnet_ethernet_hdr*)packet;
+
+
+		if (ntohs(eth_hdr->ether_type) != ETHERTYPE_IP) continue;
+	
 		ipv4_hdr = (struct libnet_ipv4_hdr*)(packet+sizeof(*eth_hdr));
+		if (ipv4_hdr->ip_p != IPPROTO_TCP) continue;
+
 		tcp_hdr = (struct libnet_tcp_hdr*)(packet+sizeof(*eth_hdr)+sizeof(*ipv4_hdr));
+		print_mac_addr(eth_hdr, "src_mac_addr");
+		print_mac_addr(eth_hdr, "dst_mac_addr");
+		print_ip_addr(ipv4_hdr);
+		printf("tcp_src_port: %u tcp_dst_port: %u\n", ntohs(tcp_hdr->th_sport), ntohs(tcp_hdr->th_dport));
+
+		const u_char* payload = packet + sizeof(*eth_hdr) + sizeof(*ipv4_hdr) + sizeof(*tcp_hdr);
+		int payload_len = (header->caplen) - (sizeof(*eth_hdr) + sizeof(*ipv4_hdr) + sizeof(*tcp_hdr));
+		print_payload(payload, payload_len);
 
 
-		if(tcp_hdr){
-			print_mac_addr(eth_hdr, "src_mac_addr");
-			print_mac_addr(eth_hdr, "dst_mac_addr");
-			if(ntohs(eth_hdr->ether_type) == ETHERTYPE_IP) print_ip_addr(ipv4_hdr);
-			else printf ("it is not ipv4 protocol %x\n",ntohs(eth_hdr->ether_type));
-			printf("tcp_src_port%u tcp_dst_port: %u \n" , tcp_hdr->th_sport,tcp_hdr->th_dport);
-		}
+		pcap_close(pcap);
 	}
-
-	pcap_close(pcap);
 }
+
