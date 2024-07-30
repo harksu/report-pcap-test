@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <libnet.h>
+#include <arpa/inet.h>
 
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
@@ -46,6 +47,29 @@ void print_mac_addr(struct libnet_ethernet_hdr* mac_hdr, const char* field){
 		}
 }
 
+void print_ip_addr(struct libnet_ipv4_hdr* ipv4_hdr){
+	u_int8_t ip1=0, ip2=0, ip3=0, ip4=0;
+	u_int32_t src_ip_addr = src_ip_addr = ipv4_hdr->ip_src.s_addr;
+	u_int32_t dst_ip_addr = ipv4_hdr->ip_dst.s_addr;
+
+
+
+	ip1 = (src_ip_addr && 0xff000000) >> 24;
+	ip2 = (src_ip_addr && 0x00ff0000) >> 16;
+	ip3 = (src_ip_addr && 0x0000ff00) >> 8;
+	ip4 = (src_ip_addr && 0xff000000);
+	printf("ipv4_src_address: %d.%d.%d.%d\n",ip1,ip2,ip3,ip4);
+
+	ip1 = (dst_ip_addr && 0xff000000) >> 24;
+	ip2 = (dst_ip_addr && 0x00ff0000) >> 16;
+	ip3 = (dst_ip_addr && 0x0000ff00) >> 8;
+	ip4 = (dst_ip_addr && 0xff000000);
+	printf("ipv4_dst_address: %d.%d.%d.%d\n",ip1,ip2,ip3,ip4);
+
+	//refactoring,, 
+}
+
+
 
 int main(int argc, char* argv[]) {
 	if (!parse(&param, argc, argv))
@@ -66,17 +90,25 @@ int main(int argc, char* argv[]) {
 		struct libnet_tcp_hdr* tcp_hdr; // tcp header 
 
 		const u_char* packet;
+		
 		int res = pcap_next_ex(pcap, &header, &packet);
 		if (res == 0) continue;
 		if (res == PCAP_ERROR || res == PCAP_ERROR_BREAK) {
 			printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
 			break;
 		}
+
+		eth_hdr = (struct libnet_ethernet_hdr*)packet;
+		ipv4_hdr = (struct libnet_ipv4_hdr*)(packet+sizeof(*eth_hdr));
+		tcp_hdr = (struct libnet_tcp_hdr*)(packet+sizeof(*eth_hdr)+sizeof(*ipv4_hdr));
+
+
 		if(tcp_hdr){
 			print_mac_addr(eth_hdr, "src_mac_addr");
 			print_mac_addr(eth_hdr, "dst_mac_addr");
-//		eth_hdr->ether_type && printf("ipv4_header => src_ip: %u dst_ip: %u \n", ipv4_hdr->ip_src, ipv4_hdr->ip_dst);
-//		printf("tcp_hedaer => src_port: %u dst_port: %u \n" , tcp_hdr->th_sport,tcp_hdr->th_dport);
+			if(ntohs(eth_hdr->ether_type) == ETHERTYPE_IP) print_ip_addr(ipv4_hdr);
+			else printf ("it is not ipv4 protocol %x\n",ntohs(eth_hdr->ether_type));
+			printf("tcp_src_port%u tcp_dst_port: %u \n" , tcp_hdr->th_sport,tcp_hdr->th_dport);
 		}
 	}
 
