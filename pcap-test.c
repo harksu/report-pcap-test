@@ -27,9 +27,22 @@ bool parse(Param* param, int argc, char* argv[]) {
 
 
 void print_mac_addr(struct libnet_ethernet_hdr* mac_hdr, const char* field){
+
 		printf("%s:",field);
+		if(field =="src_mac_addr"){
 		for (int i = 0; i<ETHER_ADDR_LEN; i++){
-			i == ETHER_ADDR_LEN-1 ? printf("%02x\n",mac_hdr->ether_shost[i]) : printf("%02x:",mac_hdr->ether_shost[i]);
+		i == ETHER_ADDR_LEN-1 ? printf("%02x\n",mac_hdr->ether_shost[i]) : printf("%02x:",mac_hdr->ether_shost[i]);
+			}
+		}
+		else if(field =="dst_mac_addr"){
+		
+		for (int i = 0; i<ETHER_ADDR_LEN; i++){
+			i == ETHER_ADDR_LEN-1 ? printf("%02x\n",mac_hdr->ether_dhost[i]) : printf("%02x:",mac_hdr->ether_dhost[i]);
+		}
+		}
+		else{
+			printf("field is src_mac_addr or dst_mac_addr, try again");
+			return;
 		}
 }
 
@@ -61,6 +74,7 @@ int main(int argc, char* argv[]) {
 		}
 		if(tcp_hdr){
 			print_mac_addr(eth_hdr, "src_mac_addr");
+			print_mac_addr(eth_hdr, "dst_mac_addr");
 //		eth_hdr->ether_type && printf("ipv4_header => src_ip: %u dst_ip: %u \n", ipv4_hdr->ip_src, ipv4_hdr->ip_dst);
 //		printf("tcp_hedaer => src_port: %u dst_port: %u \n" , tcp_hdr->th_sport,tcp_hdr->th_dport);
 		}
