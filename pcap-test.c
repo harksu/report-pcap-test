@@ -4,6 +4,7 @@
 #include <libnet.h>
 #include <arpa/inet.h>
 
+#define MAX_PAYLOAD_LEN 20
 
 void usage() {
 	printf("syntax: pcap-test <interface>\n");
@@ -73,7 +74,7 @@ void print_ip_addr(struct libnet_ipv4_hdr* ipv4_hdr){
 
 void print_payload(const u_char* payload, int len) {
 	printf("Payload: ");
-	for (int i = 0; i < len && i < 20; i++) {
+	for (int i = 0; i < len && i < MAX_PAYLOAD_LEN; i++) {
 		printf("%02x ", payload[i]);
 	}
 	printf("\n");
@@ -128,4 +129,3 @@ int main(int argc, char* argv[]) {
 	pcap_close(pcap);
 	return 0;
 }
-
